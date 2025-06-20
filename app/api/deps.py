@@ -3,12 +3,13 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.database import engine
 
 
-def get_db() -> Generator[Session, None, None]:
-    with Session(engine) as session:
+async def get_db() -> Generator[AsyncSession, None, None]:
+    async with AsyncSession(engine) as session:
         yield session
 
 
