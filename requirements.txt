@@ -1,0 +1,12 @@
+# App
+fastapi[standart]
+uvicorn
+pydantic
+pydantic-settings
+sqlalchemy
+asyncpg
+sqlmodel
+psycopg2-binary
+psycopg
+# Extra
+ruff
