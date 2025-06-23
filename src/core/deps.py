@@ -5,7 +5,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.database import engine
+from src.core.database import engine
 
 
 async def get_db() -> Generator[AsyncSession, None, None]:

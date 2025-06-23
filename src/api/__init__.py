@@ -2,7 +2,7 @@ from collections.abc import Generator
 from typing import Annotated
 from fastapi import Depends
 from sqlmodel import Session
-from app.core.database import engine
+from src.core.database import engine
 
 
 def get_db() -> Generator[Session, None, None]:

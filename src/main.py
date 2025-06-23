@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from app.api.main import api_router
-from app.core.config import settings
+from src.api.router import api_router
+from src.core.config import settings
 
 from fastapi_pagination import add_pagination
 
