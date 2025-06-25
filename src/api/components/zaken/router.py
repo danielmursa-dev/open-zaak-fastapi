@@ -1,7 +1,8 @@
 from typing import Any
-from src.api.components.zaken.models import (
+
+from src.api.components.catalogi.models.zaaktype import ZaakType
+from src.api.components.zaken.models.zaken import (
     Rol,
-    ZaakType,
     Zaak,
     ZaakInformatieObject,
     ZaakEigenschap,

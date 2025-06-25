@@ -2,41 +2,9 @@ from typing import Optional, List
 from uuid import UUID, uuid4
 from datetime import date, datetime, timedelta
 from sqlmodel import SQLModel, Field, Column, Relationship
-from pydantic import ConfigDict
 from sqlalchemy import Integer, ForeignKey
-
-
-class ZaakType(SQLModel, table=True):
-    __tablename__ = "catalogi_zaaktype"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-
-
-class ZaakIdentificatie(SQLModel, table=True):
-    __tablename__ = "zaken_zaakidentificatie"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    identificatie: Optional[str] = Field(
-        default="",
-        max_length=40,
-        description=(
-            "De unieke identificatie van de ZAAK binnen de organisatie "
-            "die verantwoordelijk is voor de behandeling van de ZAAK."
-        ),
-    )
-    bronorganisatie: str = Field(
-        min_length=9,
-        max_length=9,
-        description=(
-            "Het RSIN van de Niet-natuurlijk persoon zijnde de "
-            "organisatie die de zaak heeft gecreeerd. Dit moet een geldig "
-            "RSIN zijn van 9 nummers en voldoen aan "
-            "https://nl.wikipedia.org/wiki/Burgerservicenummer#11-proef"
-        ),
-    )
+from .identification import ZaakIdentificatie
+from src.api.components.catalogi.models.zaaktype import ZaakType
 
 
 class Zaak(SQLModel, table=True):

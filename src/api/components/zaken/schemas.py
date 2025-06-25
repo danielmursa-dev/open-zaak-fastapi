@@ -1,15 +1,15 @@
 from datetime import date, datetime, timedelta
 from src.api.fields import HyperlinkedRelatedField
-from src.api.components.zaken.models import (
+from src.api.components.catalogi.models.zaaktype import ZaakType
+from src.api.components.zaken.models.identification import ZaakIdentificatie
+from src.api.components.zaken.models.zaken import (
     Rol,
-    ZaakIdentificatie,
-    ZaakType,
     Zaak,
     ZaakInformatieObject,
     ZaakEigenschap,
-    ZaakKenmerk,
     ZaakObject,
     Resultaat,
+    ZaakKenmerk,
 )
 from typing import Union, Annotated, List, Optional
 from pydantic import computed_field, BaseModel, AnyUrl
