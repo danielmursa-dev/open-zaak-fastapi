@@ -1,10 +1,7 @@
-from typing import Any
+from typing import Any, Union, List, Optional
 from pydantic._internal._generate_schema import GetCoreSchemaHandler
 from pydantic_core import core_schema
 from src.core.middleware import request_contextvar
-
-from typing import List, Optional
-
 
 
 class HyperlinkedRelatedField:
@@ -29,11 +26,11 @@ class HyperlinkedRelatedField:
         lookup_value = getattr(obj, self.lookup_field)
         return str(request.url_for(self.view_name, **{self.lookup_field: lookup_value}))
 
-    def serialize_field(self, value: Any) -> List:
+    def serialize_field(self, value: Any) -> Union[List, str]:
         if isinstance(value, list):
             return [self.get_url(obj) for obj in value]
         else:
-            return [self.get_url(value)]
+            return self.get_url(value)
 
     def _validate(self, value: Any, _info) -> Any:
         return value
@@ -54,7 +51,16 @@ class HyperlinkedRelatedField:
             serialization=core_schema.wrap_serializer_function_ser_schema(
                 self._serialize,
                 info_arg=True,
-                return_schema=core_schema.list_schema(),
+                return_schema=core_schema.chain_schema(
+                    [
+                        core_schema.union_schema(
+                            [
+                                core_schema.list_schema(core_schema.any_schema()),
+                                core_schema.str_schema(),
+                            ]
+                        )
+                    ]
+                ),
                 when_used="json",
             ),
         )

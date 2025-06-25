@@ -1,7 +1,19 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID, uuid4
 from datetime import date, datetime, timedelta
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Column, Relationship
+from pydantic import ConfigDict
+from sqlalchemy import Integer, ForeignKey
+
+
+class ZaakType(SQLModel, table=True):
+    __tablename__ = "catalogi_zaaktype"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
 
 
 class ZaakIdentificatie(SQLModel, table=True):
@@ -38,6 +50,7 @@ class Zaak(SQLModel, table=True):
             "can be generated/reserved before the zaak is actually created."
         ),
     )
+    zaak_identificatie: Optional[ZaakIdentificatie] = Relationship()
 
     uuid: UUID = Field(
         default_factory=uuid4,
@@ -47,12 +60,18 @@ class Zaak(SQLModel, table=True):
 
     hoofdzaak_id: Optional[int] = Field(
         default=None,
-        foreign_key="zaken_zaak.id",
+        foreign_key="zaken_zaak.identificatie_ptr_id",
         description=(
             "URL-referentie naar de ZAAK, waarom verzocht is door de "
             "initiator daarvan, die behandeld wordt in twee of meer "
             "separate ZAAKen waarvan de onderhavige ZAAK er één is."
         ),
+    )
+    deelzaken: List["Zaak"] = Relationship(back_populates="hoofdzaak")
+
+    hoofdzaak: Optional["Zaak"] = Relationship(
+        back_populates="deelzaken",
+        sa_relationship_kwargs={"remote_side": "Zaak.identificatie_ptr_id"},
     )
 
     omschrijving: Optional[str] = Field(
@@ -65,12 +84,24 @@ class Zaak(SQLModel, table=True):
         max_length=1000,
         description="Een toelichting op de zaak.",
     )
+    zaaktype_id: int = Field(
+        sa_column=Column(
+            "_zaaktype_id",
+            Integer,
+            ForeignKey("catalogi_zaaktype.id"),
+        )
+    )
+    zaaktype: Optional["ZaakType"] = Relationship()
 
-    # _zaaktype_base_url
-    # _zaaktype_relative_url
-
-    # _zaaktype: Optional[int] = Field(default=None, foreign_key="catalogi_zaaktype.id")
-    # _zaaktype_url: Optional[str] = Field(default=None, max_length=1000)
+    eigenschappen: List["ZaakEigenschap"] = Relationship(back_populates="zaak")
+    zaakobjecten: List["ZaakObject"] = Relationship(back_populates="zaak")
+    kenmerken: List["ZaakKenmerk"] = Relationship(back_populates="zaak")
+    resultaat: List["Resultaat"] = Relationship(
+        back_populates="zaak"
+    )  # TODO group all per type
+    zaakinformatieobjecten: List["ZaakInformatieObject"] = Relationship(
+        back_populates="zaak"
+    )
 
     registratiedatum: date = Field(
         default_factory=date.today,
@@ -279,4 +310,94 @@ class Zaak(SQLModel, table=True):
         ),
     )
 
+    rollen: List["Rol"] = Relationship(back_populates="zaak")
+
     created_on: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Rol(SQLModel, table=True):
+    __tablename__ = "zaken_rol"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="rollen")
+
+
+class ZaakEigenschap(SQLModel, table=True):
+    __tablename__ = "zaken_zaakeigenschap"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="eigenschappen")
+
+
+class ZaakInformatieObject(SQLModel, table=True):
+    __tablename__ = "zaken_zaakinformatieobject"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="zaakinformatieobjecten")
+
+
+class ZaakObject(SQLModel, table=True):
+    __tablename__ = "zaken_zaakobject"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="zaakobjecten")
+
+
+class ZaakKenmerk(SQLModel, table=True):
+    __tablename__ = "zaken_zaakkenmerk"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="kenmerken")
+
+
+class Resultaat(SQLModel, table=True):
+    __tablename__ = "zaken_resultaat"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+
+    zaak: Zaak | None = Relationship(back_populates="resultaat")
