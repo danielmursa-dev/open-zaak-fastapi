@@ -1,8 +1,6 @@
 from typing import Literal
-from pydantic import (
-    PostgresDsn,
-    computed_field,
-)
+
+from pydantic import PostgresDsn, computed_field
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

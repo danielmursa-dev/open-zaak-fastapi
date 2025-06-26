@@ -1,10 +1,12 @@
-from typing import Any, Union, List, Optional
-from pydantic._internal._generate_schema import GetCoreSchemaHandler
-from pydantic_core import core_schema
-from src.core.middleware import request_contextvar
+from typing import Any, List, Optional, Union
+
 from geoalchemy2.elements import WKBElement
 from geoalchemy2.shape import to_shape
+from pydantic._internal._generate_schema import GetCoreSchemaHandler
+from pydantic_core import core_schema
 from shapely.geometry import mapping
+
+from src.core.middleware import request_contextvar
 
 
 class HyperlinkedRelatedField:

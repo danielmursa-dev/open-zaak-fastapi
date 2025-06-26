@@ -1,23 +1,20 @@
 from datetime import date, datetime, timedelta
-from src.api.fields import HyperlinkedRelatedField, GeoJSONGeometry
-from src.api.components.catalogi.models.zaaktype import ZaakType
-from src.api.components.zaken.models.identification import ZaakIdentificatie
-from src.api.components.zaken.models.zaken import (
-    Rol,
-    Zaak,
-    ZaakInformatieObject,
-    ZaakEigenschap,
-    ZaakObject,
-    Resultaat,
-    Status,
-    BetalingsIndicatie,
-)
-from src.api.mixins import BaseMixin
-from typing import Union, Annotated, List, Optional
-from pydantic import computed_field, AnyUrl
+from typing import Annotated, List, Optional, Union
 from uuid import UUID
+
+from pydantic import AnyUrl, computed_field
 from sqlalchemy import JSON
 from sqlmodel import Field
+
+from src.api.components.catalogi.models.zaaktype import ZaakType
+from src.api.components.zaken.models.identification import ZaakIdentificatie
+from src.api.components.zaken.models.zaken import (BetalingsIndicatie,
+                                                   Resultaat, Rol, Status,
+                                                   Zaak, ZaakEigenschap,
+                                                   ZaakInformatieObject,
+                                                   ZaakObject)
+from src.api.fields import GeoJSONGeometry, HyperlinkedRelatedField
+from src.api.mixins import BaseMixin
 
 
 class RelevanteZaakSchema(BaseMixin):

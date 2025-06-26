@@ -1,18 +1,18 @@
-from typing import Optional, List
-from uuid import UUID, uuid4
 from datetime import date, datetime, timedelta
-from sqlmodel import SQLModel, Field, Column, Relationship
-from sqlalchemy import Integer, ForeignKey
-from .identification import ZaakIdentificatie
-from src.api.components.catalogi.models.zaaktype import ZaakType
-
-from sqlalchemy.types import JSON
-from .constants import BetalingsIndicatie
-from sqlalchemy import Enum as SQLEnum
-
-from pydantic import ConfigDict
+from typing import List, Optional
+from uuid import UUID, uuid4
 
 from geoalchemy2 import Geometry
+from pydantic import ConfigDict
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import ForeignKey, Integer
+from sqlalchemy.types import JSON
+from sqlmodel import Column, Field, Relationship, SQLModel
+
+from src.api.components.catalogi.models.zaaktype import ZaakType
+
+from .constants import BetalingsIndicatie
+from .identification import ZaakIdentificatie
 
 
 class Zaak(SQLModel, table=True):

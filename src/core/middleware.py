@@ -1,6 +1,7 @@
-from fastapi import Request
 import contextvars
 from typing import Optional
+
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 request_contextvar: contextvars.ContextVar[Optional[Request]] = contextvars.ContextVar(
