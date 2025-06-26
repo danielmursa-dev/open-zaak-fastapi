@@ -7,6 +7,7 @@ from src.api.components.zaken.models.zaken import (
     ZaakInformatieObject,
     ZaakEigenschap,
     ZaakObject,
+    Status,
     Resultaat,
 )
 from sqlmodel import select
@@ -27,11 +28,14 @@ async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
         joinedload(Zaak.zaaktype).load_only(ZaakType.uuid),
         selectinload(Zaak.rollen).load_only(Rol.uuid),
         selectinload(Zaak.eigenschappen).load_only(ZaakEigenschap.uuid),
+        selectinload(Zaak.status).load_only(Status.uuid),
+        selectinload(Zaak.relevante_andere_zaken),
         selectinload(Zaak.zaakinformatieobjecten).load_only(ZaakInformatieObject.uuid),
         selectinload(Zaak.zaakobjecten).load_only(ZaakObject.uuid),
         joinedload(Zaak.kenmerken),
         selectinload(Zaak.resultaat).load_only(Resultaat.uuid),
     )
+
     return await paginate(session, statement)
 
 

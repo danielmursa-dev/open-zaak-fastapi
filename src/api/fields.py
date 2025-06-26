@@ -2,6 +2,9 @@ from typing import Any, Union, List, Optional
 from pydantic._internal._generate_schema import GetCoreSchemaHandler
 from pydantic_core import core_schema
 from src.core.middleware import request_contextvar
+from geoalchemy2.elements import WKBElement
+from geoalchemy2.shape import to_shape
+from shapely.geometry import mapping
 
 
 class HyperlinkedRelatedField:
@@ -64,3 +67,33 @@ class HyperlinkedRelatedField:
                 when_used="json",
             ),
         )
+
+
+class GeoJSONGeometry:
+    def __init__(self, value: WKBElement):
+        if not isinstance(value, WKBElement):
+            raise TypeError(f"Expected WKBElement, got {type(value)}")
+        self._value = value
+        self._shape = to_shape(value)
+
+    def to_geojson(self) -> dict:
+        return mapping(self._shape)
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_plain_validator_function(
+            cls._validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._serialize, return_schema=core_schema.any_schema()
+            ),
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> "GeoJSONGeometry":
+        return cls(value)
+
+    @classmethod
+    def _serialize(cls, value: "GeoJSONGeometry") -> dict:
+        return value.to_geojson()

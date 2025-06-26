@@ -6,9 +6,18 @@ from sqlalchemy import Integer, ForeignKey
 from .identification import ZaakIdentificatie
 from src.api.components.catalogi.models.zaaktype import ZaakType
 
+from sqlalchemy.types import JSON
+from .constants import BetalingsIndicatie
+from sqlalchemy import Enum as SQLEnum
+
+from pydantic import ConfigDict
+
+from geoalchemy2 import Geometry
+
 
 class Zaak(SQLModel, table=True):
     __tablename__ = "zaken_zaak"
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     identificatie_ptr_id: int = Field(
         primary_key=True,
@@ -60,10 +69,14 @@ class Zaak(SQLModel, table=True):
         )
     )
     zaaktype: Optional["ZaakType"] = Relationship()
-
+    rollen: List["Rol"] = Relationship(back_populates="zaak")
     eigenschappen: List["ZaakEigenschap"] = Relationship(back_populates="zaak")
     zaakobjecten: List["ZaakObject"] = Relationship(back_populates="zaak")
     kenmerken: List["ZaakKenmerk"] = Relationship(back_populates="zaak")
+    status: List["Status"] = Relationship(back_populates="zaak")
+    relevante_andere_zaken: List["RelevanteZaakRelatie"] = Relationship(
+        back_populates="zaak"
+    )
     resultaat: List["Resultaat"] = Relationship(
         back_populates="zaak"
     )  # TODO group all per type
@@ -89,7 +102,9 @@ class Zaak(SQLModel, table=True):
             "https://nl.wikipedia.org/wiki/Burgerservicenummer#11-proef"
         ),
     )
-
+    producten_of_diensten: List[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=True)
+    )
     startdatum: date = Field(
         index=True,
         description="De datum waarop met de uitvoering van de zaak is gestart",
@@ -127,14 +142,8 @@ class Zaak(SQLModel, table=True):
             "Aanduiding van de mate waarin het zaakdossier van de ZAAK voor de openbaarheid bestemd is."
         ),
     )
-
-    betalingsindicatie: Optional[str] = Field(
-        default=None,
-        max_length=20,
-        description=(
-            "Indicatie of de, met behandeling van de zaak gemoeide, "
-            "kosten betaald zijn door de desbetreffende betrokkene."
-        ),
+    betalingsindicatie: Optional[str] = Column(
+        SQLEnum(BetalingsIndicatie), nullable=True, default=None
     )
     laatste_betaaldatum: Optional[datetime] = Field(
         default=None,
@@ -144,9 +153,8 @@ class Zaak(SQLModel, table=True):
         ),
     )
 
-    zaakgeometrie: Optional[str] = Field(
-        default=None,
-        description="Punt, lijn of (multi-)vlak geometrie-informatie.",
+    zaakgeometrie: Optional[object] = Field(
+        sa_column=Column(Geometry(geometry_type="GEOMETRY", srid=4326))
     )
 
     verlenging_reden: Optional[str] = Field(
@@ -278,8 +286,6 @@ class Zaak(SQLModel, table=True):
         ),
     )
 
-    rollen: List["Rol"] = Relationship(back_populates="zaak")
-
     created_on: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -354,6 +360,15 @@ class ZaakKenmerk(SQLModel, table=True):
     )
     zaak: Zaak | None = Relationship(back_populates="kenmerken")
 
+    kenmerk: str = Field(
+        max_length=40,
+        description=("Identificeert uniek de zaak in een andere administratie."),
+    )
+    bron: str = Field(
+        max_length=40,
+        description=("De aanduiding van de administratie waar het kenmerk op slaat."),
+    )
+
 
 class Resultaat(SQLModel, table=True):
     __tablename__ = "zaken_resultaat"
@@ -369,3 +384,52 @@ class Resultaat(SQLModel, table=True):
     )
 
     zaak: Zaak | None = Relationship(back_populates="resultaat")
+
+
+class Status(SQLModel, table=True):
+    __tablename__ = "zaken_status"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uuid: UUID = Field(
+        default_factory=uuid4,
+        index=True,
+        description="Unieke resource identifier (UUID4)",
+    )
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+
+    zaak: Zaak | None = Relationship(back_populates="status")
+
+
+class RelevanteZaakRelatie(SQLModel, table=True):
+    __tablename__ = "zaken_relevantezaakrelatie"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    zaak_id: int | None = Field(
+        default=None,
+        foreign_key="zaken_zaak.identificatie_ptr_id",
+    )
+    zaak: Zaak | None = Relationship(back_populates="relevante_andere_zaken")
+
+    aard_relatie: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description=(
+            "Benamingen van de aard van de relaties van andere zaken tot (onderhanden) zaken."
+        ),
+    )
+    overige_relatie: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description=(
+            "Naam van de overige relatie. Verplicht bij relatie aard `overig`."
+        ),
+    )
+    toelichting: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description=(
+            "Een toelichting op de aard van de relatie tussen beide ZAKEN. "
+            "(vooral bedoeld in combinatie met relatie aard `overig`)"
+        ),
+    )
