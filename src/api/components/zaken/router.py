@@ -1,18 +1,23 @@
 from typing import Any
 
 from fastapi import APIRouter
-from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import select
 
 from src.api.components.catalogi.models.zaaktype import ZaakType
-from src.api.components.zaken.models.zaken import (Resultaat, Rol, Status,
-                                                   Zaak, ZaakEigenschap,
-                                                   ZaakInformatieObject,
-                                                   ZaakObject)
+from src.api.components.zaken.models.zaken import (
+    Resultaat,
+    Rol,
+    Status,
+    Zaak,
+    ZaakEigenschap,
+    ZaakInformatieObject,
+    ZaakObject,
+)
 from src.api.components.zaken.schemas import ZaakSchema
 from src.core.deps import SessionDep
+from src.core.pagination import Page
 
 zaken_router = APIRouter()
 

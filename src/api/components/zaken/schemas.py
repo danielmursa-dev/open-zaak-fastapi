@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, computed_field
+from pydantic import AnyUrl, BaseModel, computed_field
 from sqlalchemy import JSON
 from sqlmodel import Field
 
@@ -17,10 +17,28 @@ from src.api.fields import GeoJSONGeometry, HyperlinkedRelatedField
 from src.api.mixins import BaseMixin
 
 
+class UUIDZaakSchema(BaseModel):
+    uuid: UUID
+
+
 class RelevanteZaakSchema(BaseMixin):
     aard_relatie: Optional[str]
     overige_relatie: Optional[str]
     toelichting: Optional[str]
+
+    @computed_field
+    @property
+    def url(self) -> Union[List, str]:
+        field = HyperlinkedRelatedField(view_name="zaak-detail", lookup_field="uuid")
+        return field.serialize_field(self.relevant_zaak)
+
+    class Config:
+        from_attributes = True
+        arbitrary_types_allowed = True
+        validate_by_name = True
+        exclude_fields = {
+            "relevant_zaak": UUIDZaakSchema,
+        }
 
 
 class ZaakKenmerkSchema(BaseMixin):
@@ -78,9 +96,7 @@ class ZaakSchema(BaseMixin):
     ]
     eigenschappen: Annotated[
         List[ZaakEigenschap],
-        HyperlinkedRelatedField(
-            view_name="rol-detail", lookup_field="uuid"
-        ),  # TODO check all url
+        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
     ]
     zaakinformatieobjecten: Annotated[
         List[ZaakInformatieObject],
@@ -99,12 +115,7 @@ class ZaakSchema(BaseMixin):
         HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
     ]
 
-    # verlenging  # TODO method
-
     class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
-        validate_by_name = True
         exclude_fields = {
             "processobject_datumkenmerk": Optional[str],
             "processobject_identificatie": Optional[str],

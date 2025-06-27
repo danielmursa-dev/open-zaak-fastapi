@@ -75,8 +75,10 @@ class Zaak(SQLModel, table=True):
     kenmerken: List["ZaakKenmerk"] = Relationship(back_populates="zaak")
     status: List["Status"] = Relationship(back_populates="zaak")
     relevante_andere_zaken: List["RelevanteZaakRelatie"] = Relationship(
-        back_populates="zaak"
+        back_populates="zaak",
+        sa_relationship_kwargs={"foreign_keys": "[RelevanteZaakRelatie.zaak_id]"},
     )
+
     resultaat: List["Resultaat"] = Relationship(
         back_populates="zaak"
     )  # TODO group all per type
@@ -409,7 +411,26 @@ class RelevanteZaakRelatie(SQLModel, table=True):
         default=None,
         foreign_key="zaken_zaak.identificatie_ptr_id",
     )
-    zaak: Zaak | None = Relationship(back_populates="relevante_andere_zaken")
+    zaak: Zaak | None = Relationship(
+        back_populates="relevante_andere_zaken",
+        sa_relationship_kwargs={"foreign_keys": "[RelevanteZaakRelatie.zaak_id]"},
+    )
+
+    relevant_zaak_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(
+            "_relevant_zaak_id",
+            Integer,
+            ForeignKey("zaken_zaak.identificatie_ptr_id"),
+            nullable=True,
+        ),
+        description="URL-referentie naar de ZAAK.",
+    )
+    relevant_zaak: Optional["Zaak"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "[RelevanteZaakRelatie.relevant_zaak_id]"
+        }
+    )
 
     aard_relatie: Optional[str] = Field(
         default=None,
