@@ -16,7 +16,6 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-
 from src.core.database import Base
 
 
@@ -118,6 +117,10 @@ class ZaakEigenschap(Base):
 
     zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
     zaak = relationship("Zaak", back_populates="eigenschappen")
+
+    @property
+    def zaak_uuid(self):
+        return self.zaak.uuid if self.zaak else None
 
 
 class ZaakInformatieObject(Base):

@@ -71,6 +71,31 @@ class HyperlinkedRelatedField:
         )
 
 
+class NestedHyperlinkedRelatedField(HyperlinkedRelatedField):
+    def __init__(
+        self,
+        view_name: str,
+        lookup_fields: tuple[str, str],
+    ):
+        super().__init__(view_name=view_name)
+        self.lookup_fields = lookup_fields
+
+    def get_url(self, obj: Any) -> Optional[str]:
+        if not obj:
+            return None
+
+        try:
+            lookup_values = {field: getattr(obj, field) for field in self.lookup_fields}
+        except AttributeError:
+            return None
+
+        if any(v in (None, "") for v in lookup_values.values()):
+            return None
+
+        request = request_contextvar.get()
+        return str(request.url_for(self.view_name, **lookup_values))
+
+
 class GeoJSONGeometry:
     def __init__(self, value: WKBElement):
         if not isinstance(value, WKBElement):

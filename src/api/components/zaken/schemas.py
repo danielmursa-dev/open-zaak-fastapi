@@ -18,7 +18,11 @@ from src.api.components.zaken.models.zaken import (
     ZaakInformatieObject,
     ZaakObject,
 )
-from src.api.fields import GeoJSONGeometry, HyperlinkedRelatedField
+from src.api.fields import (
+    GeoJSONGeometry,
+    HyperlinkedRelatedField,
+    NestedHyperlinkedRelatedField,
+)
 from src.api.mixins import BaseMixin
 
 
@@ -102,7 +106,9 @@ class ZaakSchema(BaseMixin):
 
     eigenschappen: Annotated[
         List[ZaakEigenschap],
-        HyperlinkedRelatedField(view_name="eigenschappen-detail", lookup_field="uuid"),
+        NestedHyperlinkedRelatedField(
+            view_name="eigenschappen-detail", lookup_fields=("uuid", "zaak_uuid")
+        ),
     ]
 
     zaakinformatieobjecten: Annotated[

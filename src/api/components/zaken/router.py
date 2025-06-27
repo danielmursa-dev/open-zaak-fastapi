@@ -24,13 +24,12 @@ zaken_router = APIRouter()
 @zaken_router.get("/zaken", name="zaken-list", response_model=Page[ZaakSchema])
 async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
     statement = (
-        select(Zaak)
-        .options(
+        select(Zaak).options(
             joinedload(Zaak.zaak_identificatie),
             joinedload(Zaak.zaaktype),
             selectinload(Zaak.kenmerken),
             selectinload(Zaak.rollen).load_only(Rol.uuid),
-            selectinload(Zaak.eigenschappen).load_only(ZaakEigenschap.uuid),
+            selectinload(Zaak.eigenschappen),
             selectinload(Zaak.status).load_only(Status.uuid),
             selectinload(Zaak.relevante_andere_zaken),
             selectinload(Zaak.zaakinformatieobjecten).load_only(
@@ -41,7 +40,7 @@ async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
             selectinload(Zaak.hoofdzaak).load_only(Zaak.uuid),
             selectinload(Zaak.deelzaken).load_only(Zaak.uuid),
         )
-        .where(Zaak.uuid == "fdc97bac-4ec0-44df-bb7e-efaff23da325")
+        # .where(Zaak.uuid == "fdc97bac-4ec0-44df-bb7e-efaff23da325")
     )
     return await paginate(session, statement)
 
@@ -61,8 +60,10 @@ async def detail_rol(uuid: str, session: SessionDep) -> Any:
     return []
 
 
-@zaken_router.get("/zaakeigenschappen/{uuid}", name="eigenschappen-detail")
-async def detail_eigenschappen(uuid: str, session: SessionDep) -> Any:
+@zaken_router.get(
+    "/zaken/{zaak_uuid}/eigenschappen/{uuid}", name="eigenschappen-detail"
+)
+async def detail_eigenschappen(zaak_uuid: str, uuid: str, session: SessionDep) -> Any:
     return []
 
 
