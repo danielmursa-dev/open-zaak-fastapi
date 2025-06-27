@@ -7,12 +7,17 @@ from sqlalchemy import JSON
 from sqlmodel import Field
 
 from src.api.components.catalogi.models.zaaktype import ZaakType
+from src.api.components.zaken.models.constants import BetalingsIndicatie
 from src.api.components.zaken.models.identification import ZaakIdentificatie
-from src.api.components.zaken.models.zaken import (BetalingsIndicatie,
-                                                   Resultaat, Rol, Status,
-                                                   Zaak, ZaakEigenschap,
-                                                   ZaakInformatieObject,
-                                                   ZaakObject)
+from src.api.components.zaken.models.zaken import (
+    Resultaat,
+    Rol,
+    Status,
+    Zaak,
+    ZaakEigenschap,
+    ZaakInformatieObject,
+    ZaakObject,
+)
 from src.api.fields import GeoJSONGeometry, HyperlinkedRelatedField
 from src.api.mixins import BaseMixin
 
@@ -88,31 +93,37 @@ class ZaakSchema(BaseMixin):
     ]
     hoofdzaak: Annotated[
         Optional[Zaak],
-        HyperlinkedRelatedField(view_name="zaaktype-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(view_name="zaak-detail", lookup_field="uuid"),
     ]
     deelzaken: Annotated[
         List[Zaak],
-        HyperlinkedRelatedField(view_name="zaaktype-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(view_name="zaak-detail", lookup_field="uuid"),
     ]
+
     eigenschappen: Annotated[
         List[ZaakEigenschap],
-        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(view_name="eigenschappen-detail", lookup_field="uuid"),
     ]
+
     zaakinformatieobjecten: Annotated[
         List[ZaakInformatieObject],
-        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(
+            view_name="zaakinformatieobject-detail", lookup_field="uuid"
+        ),
     ]
     zaakobjecten: Annotated[
         List[ZaakObject],
-        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(
+            view_name="zaakobjecttypen-detail", lookup_field="uuid"
+        ),
     ]
     resultaat: Annotated[
         List[Resultaat],
-        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(view_name="resultaattypen-detail", lookup_field="uuid"),
     ]
     status: Annotated[
         List[Status],
-        HyperlinkedRelatedField(view_name="rol-detail", lookup_field="uuid"),
+        HyperlinkedRelatedField(view_name="statustypen-detail", lookup_field="uuid"),
     ]
 
     class Config:

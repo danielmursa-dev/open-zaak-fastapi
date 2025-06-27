@@ -5,7 +5,6 @@ from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import select
 
-from src.api.components.catalogi.models.zaaktype import ZaakType
 from src.api.components.zaken.models.zaken import (
     Resultaat,
     Rol,
@@ -24,20 +23,32 @@ zaken_router = APIRouter()
 
 @zaken_router.get("/zaken", name="zaken-list", response_model=Page[ZaakSchema])
 async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
-    statement = select(Zaak).options(
-        selectinload(Zaak.zaak_identificatie),
-        joinedload(Zaak.zaaktype).load_only(ZaakType.uuid),
-        selectinload(Zaak.rollen).load_only(Rol.uuid),
-        selectinload(Zaak.eigenschappen).load_only(ZaakEigenschap.uuid),
-        selectinload(Zaak.status).load_only(Status.uuid),
-        selectinload(Zaak.relevante_andere_zaken),
-        selectinload(Zaak.zaakinformatieobjecten).load_only(ZaakInformatieObject.uuid),
-        selectinload(Zaak.zaakobjecten).load_only(ZaakObject.uuid),
-        joinedload(Zaak.kenmerken),
-        selectinload(Zaak.resultaat).load_only(Resultaat.uuid),
+    statement = (
+        select(Zaak)
+        .options(
+            joinedload(Zaak.zaak_identificatie),
+            joinedload(Zaak.zaaktype),
+            selectinload(Zaak.kenmerken),
+            selectinload(Zaak.rollen).load_only(Rol.uuid),
+            selectinload(Zaak.eigenschappen).load_only(ZaakEigenschap.uuid),
+            selectinload(Zaak.status).load_only(Status.uuid),
+            selectinload(Zaak.relevante_andere_zaken),
+            selectinload(Zaak.zaakinformatieobjecten).load_only(
+                ZaakInformatieObject.uuid
+            ),
+            selectinload(Zaak.zaakobjecten).load_only(ZaakObject.uuid),
+            selectinload(Zaak.resultaat).load_only(Resultaat.uuid),
+            selectinload(Zaak.hoofdzaak).load_only(Zaak.uuid),
+            selectinload(Zaak.deelzaken).load_only(Zaak.uuid),
+        )
+        .where(Zaak.uuid == "fdc97bac-4ec0-44df-bb7e-efaff23da325")
     )
-
     return await paginate(session, statement)
+
+
+@zaken_router.get("/zaaktypen/{uuid}", name="zaaktype-detail")
+async def detail_zaaktype(uuid: str, session: SessionDep) -> Any:
+    return []
 
 
 @zaken_router.get("/zaken/{uuid}", name="zaak-detail")
@@ -50,25 +61,26 @@ async def detail_rol(uuid: str, session: SessionDep) -> Any:
     return []
 
 
-@zaken_router.get("/zaaktype/{uuid}", name="zaaktype-detail")
-async def detail_zaaktype(uuid: str, session: SessionDep) -> Any:
+@zaken_router.get("/zaakeigenschappen/{uuid}", name="eigenschappen-detail")
+async def detail_eigenschappen(uuid: str, session: SessionDep) -> Any:
     return []
 
 
-@zaken_router.get(
-    "/zaakeigenschap-detail/{uuid}", name="zaakeigenschap-detail"
-)  # check all url # TODO
-async def detail_zaakeigenschap(uuid: str, session: SessionDep) -> Any:
+@zaken_router.get("/resultaten/{uuid}", name="resultaattypen-detail")
+async def detail_resultaattypen(uuid: str, session: SessionDep) -> Any:
     return []
 
 
-@zaken_router.get(
-    "/zaakinformatieobject-detail/{uuid}", name="zaakinformatieobject-detail"
-)  # check all url
-async def detail_zaakinformatieobject(uuid: str, session: SessionDep) -> Any:
+@zaken_router.get("/informatieobjecttypen/{uuid}", name="zaakinformatieobject-detail")
+async def detail_informatieobjecttypen(uuid: str, session: SessionDep) -> Any:
     return []
 
 
-@zaken_router.get("/resultaat-detail/{uuid}", name="resultaat-detail")  # check all url
-async def detail_resultaat(uuid: str, session: SessionDep) -> Any:
+@zaken_router.get("/zaakobjecten/{uuid}", name="zaakobjecttypen-detail")
+async def detail_zaakobjecttypen(uuid: str, session: SessionDep) -> Any:
+    return []
+
+
+@zaken_router.get("/statussen/{uuid}", name="statustypen-detail")
+async def detail_statustypen(uuid: str, session: SessionDep) -> Any:
     return []

@@ -18,21 +18,21 @@ from fastapi_pagination.links.default import (
     TAny,
     resolve_default_links,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field
 
 
 @dataclass
 class BaseUseLinks(BaseLinksCustomizer[TPage_contra], ABC):
-    previous_page: HttpUrl = "previous_page"
-    next_page: HttpUrl = "next_page"
+    previous_page: str = "previous_page"
+    next_page: str = "next_page"
 
     def customize_page_ns(self, page_cls: PageCls, ns: ClsNamespace) -> None:
         from pydantic import computed_field
 
-        ns[self.previous_page] = computed_field(return_type=HttpUrl, alias="previous")(
+        ns[self.previous_page] = computed_field(return_type=str, alias="previous")(
             lambda _self: self.resolve_links(_self, "prev")
         )
-        ns[self.next_page] = computed_field(return_type=HttpUrl, alias="next")(
+        ns[self.next_page] = computed_field(return_type=str, alias="next")(
             lambda _self: self.resolve_links(_self, "next")
         )
 

@@ -1,14 +1,13 @@
-from typing import Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, Integer
+from sqlalchemy.dialects.postgresql import UUID
+
+from src.core.database import Base
 
 
-class ZaakType(SQLModel, table=True):
+class ZaakType(Base):
     __tablename__ = "catalogi_zaaktype"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)

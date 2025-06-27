@@ -1,456 +1,194 @@
-from datetime import date, datetime, timedelta
-from typing import List, Optional
-from uuid import UUID, uuid4
+from datetime import date, datetime
+from uuid import uuid4
 
 from geoalchemy2 import Geometry
-from pydantic import ConfigDict
-from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, Integer
-from sqlalchemy.types import JSON
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Interval,
+    String,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
-from src.api.components.catalogi.models.zaaktype import ZaakType
 
-from .constants import BetalingsIndicatie
-from .identification import ZaakIdentificatie
+from src.core.database import Base
 
 
-class Zaak(SQLModel, table=True):
+class Zaak(Base):
     __tablename__ = "zaken_zaak"
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    identificatie_ptr_id: int = Field(
-        primary_key=True,
-        foreign_key="zaken_zaakidentificatie.id",
-        description=(
-            "Zaak identification details are tracked in a separate table so numbers "
-            "can be generated/reserved before the zaak is actually created."
-        ),
-    )
-    zaak_identificatie: Optional[ZaakIdentificatie] = Relationship()
-
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
+    identificatie_ptr_id = Column(
+        Integer, ForeignKey("zaken_zaakidentificatie.id"), primary_key=True
     )
 
-    hoofdzaak_id: Optional[int] = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-        description=(
-            "URL-referentie naar de ZAAK, waarom verzocht is door de "
-            "initiator daarvan, die behandeld wordt in twee of meer "
-            "separate ZAAKen waarvan de onderhavige ZAAK er één is."
-        ),
-    )
-    deelzaken: List["Zaak"] = Relationship(back_populates="hoofdzaak")
+    zaak_identificatie = relationship("ZaakIdentificatie", backref="zaak")
 
-    hoofdzaak: Optional["Zaak"] = Relationship(
-        back_populates="deelzaken",
-        sa_relationship_kwargs={"remote_side": "Zaak.identificatie_ptr_id"},
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    hoofdzaak_id = Column(
+        Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"), nullable=True
+    )
+    hoofdzaak = relationship(
+        "Zaak", remote_side=[identificatie_ptr_id], back_populates="deelzaken"
+    )
+    deelzaken = relationship(
+        "Zaak", back_populates="hoofdzaak", foreign_keys=[hoofdzaak_id]
     )
 
-    omschrijving: Optional[str] = Field(
-        default=None,
-        max_length=80,
-        description="Een korte omschrijving van de zaak.",
+    omschrijving = Column(String(80), nullable=True)
+    toelichting = Column(String(1000), nullable=True)
+
+    zaaktype_id = Column(
+        Integer,
+        ForeignKey("catalogi_zaaktype.id"),
+        name="_zaaktype_id",
     )
-    toelichting: Optional[str] = Field(
-        default=None,
-        max_length=1000,
-        description="Een toelichting op de zaak.",
-    )
-    zaaktype_id: int = Field(
-        sa_column=Column(
-            "_zaaktype_id",
-            Integer,
-            ForeignKey("catalogi_zaaktype.id"),
-        )
-    )
-    zaaktype: Optional["ZaakType"] = Relationship()
-    rollen: List["Rol"] = Relationship(back_populates="zaak")
-    eigenschappen: List["ZaakEigenschap"] = Relationship(back_populates="zaak")
-    zaakobjecten: List["ZaakObject"] = Relationship(back_populates="zaak")
-    kenmerken: List["ZaakKenmerk"] = Relationship(back_populates="zaak")
-    status: List["Status"] = Relationship(back_populates="zaak")
-    relevante_andere_zaken: List["RelevanteZaakRelatie"] = Relationship(
+    zaaktype = relationship("ZaakType")
+
+    rollen = relationship("Rol", back_populates="zaak")
+    eigenschappen = relationship("ZaakEigenschap", back_populates="zaak")
+    zaakobjecten = relationship("ZaakObject", back_populates="zaak")
+    kenmerken = relationship("ZaakKenmerk", back_populates="zaak")
+    status = relationship("Status", back_populates="zaak")
+
+    relevante_andere_zaken = relationship(
+        "RelevanteZaakRelatie",
         back_populates="zaak",
-        sa_relationship_kwargs={"foreign_keys": "[RelevanteZaakRelatie.zaak_id]"},
+        foreign_keys="[RelevanteZaakRelatie.zaak_id]",
     )
 
-    resultaat: List["Resultaat"] = Relationship(
-        back_populates="zaak"
-    )  # TODO group all per type
-    zaakinformatieobjecten: List["ZaakInformatieObject"] = Relationship(
-        back_populates="zaak"
+    resultaat = relationship("Resultaat", back_populates="zaak")
+    zaakinformatieobjecten = relationship("ZaakInformatieObject", back_populates="zaak")
+    registratiedatum = Column(Date, default=date.today, nullable=False)
+    verantwoordelijke_organisatie = Column(String(9), nullable=False)
+    producten_of_diensten = Column(JSON, nullable=True, default=list)
+    startdatum = Column(Date, index=True, nullable=False)
+    einddatum = Column(Date, nullable=True)
+    einddatum_gepland = Column(Date, nullable=True)
+    uiterlijke_einddatum_afdoening = Column(Date, nullable=True)
+    publicatiedatum = Column(Date, nullable=True)
+    communicatiekanaal = Column(String(1000), nullable=True)
+    vertrouwelijkheidaanduiding = Column(String, nullable=True)
+    betalingsindicatie = Column(String, nullable=True, default=None)
+    laatste_betaaldatum = Column(DateTime, nullable=True)
+    zaakgeometrie = Column(Geometry(geometry_type="GEOMETRY", srid=4326), nullable=True)
+    verlenging_reden = Column(String(200), nullable=True)
+    verlenging_duur = Column(Interval, nullable=True)
+    opschorting_indicatie = Column(Boolean, default=False, nullable=False)
+    opschorting_reden = Column(String(200), nullable=True)
+    opschorting_eerdere_opschorting = Column(Boolean, default=False, nullable=False)
+    selectielijstklasse = Column(String(1000), nullable=True)
+    archiefnominatie = Column(String(40), index=True, nullable=True)
+    archiefstatus = Column(
+        String(40), index=True, default="nog_te_archiveren", nullable=False
     )
-
-    registratiedatum: date = Field(
-        default_factory=date.today,
-        description=(
-            "De datum waarop de zaakbehandelende organisatie de ZAAK "
-            "heeft geregistreerd. Indien deze niet opgegeven wordt, "
-            "wordt de datum van vandaag gebruikt."
-        ),
-    )
-    verantwoordelijke_organisatie: str = Field(
-        min_length=9,
-        max_length=9,
-        description=(
-            "Het RSIN van de Niet-natuurlijk persoon zijnde de organisatie "
-            "die eindverantwoordelijk is voor de behandeling van de "
-            "zaak. Dit moet een geldig RSIN zijn van 9 nummers en voldoen aan "
-            "https://nl.wikipedia.org/wiki/Burgerservicenummer#11-proef"
-        ),
-    )
-    producten_of_diensten: List[str] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=True)
-    )
-    startdatum: date = Field(
-        index=True,
-        description="De datum waarop met de uitvoering van de zaak is gestart",
-    )
-    einddatum: Optional[date] = Field(
-        default=None,
-        description="De datum waarop de uitvoering van de zaak afgerond is.",
-    )
-
-    einddatum_gepland: Optional[date] = Field(
-        default=None,
-        description="De datum waarop volgens de planning verwacht wordt dat de zaak afgerond wordt.",
-    )
-    uiterlijke_einddatum_afdoening: Optional[date] = Field(
-        default=None,
-        description="De laatste datum waarop volgens wet- en regelgeving de zaak afgerond dient te zijn.",
-    )
-    publicatiedatum: Optional[date] = Field(
-        default=None,
-        description="Datum waarop (het starten van) de zaak gepubliceerd is of wordt.",
-    )
-
-    communicatiekanaal: Optional[str] = Field(
-        default=None,
-        max_length=1000,
-        description=(
-            "Het medium waarlangs de aanleiding om een zaak te starten is ontvangen. "
-            "URL naar een communicatiekanaal in de VNG-Referentielijst van communicatiekanalen."
-        ),
-    )
-
-    vertrouwelijkheidaanduiding: Optional[str] = Field(
-        default=None,
-        description=(
-            "Aanduiding van de mate waarin het zaakdossier van de ZAAK voor de openbaarheid bestemd is."
-        ),
-    )
-    betalingsindicatie: Optional[str] = Column(
-        SQLEnum(BetalingsIndicatie), nullable=True, default=None
-    )
-    laatste_betaaldatum: Optional[datetime] = Field(
-        default=None,
-        description=(
-            "De datum waarop de meest recente betaling is verwerkt "
-            "van kosten die gemoeid zijn met behandeling van de zaak."
-        ),
-    )
-
-    zaakgeometrie: Optional[object] = Field(
-        sa_column=Column(Geometry(geometry_type="GEOMETRY", srid=4326))
-    )
-
-    verlenging_reden: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description=(
-            "Omschrijving van de reden voor het verlengen van de behandeling van de zaak."
-        ),
-    )
-    verlenging_duur: Optional[timedelta] = Field(
-        default=None,
-        description=(
-            "Het aantal werkbare dagen waarmee de doorlooptijd van de "
-            "behandeling van de ZAAK is verlengd (of verkort) ten opzichte "
-            "van de eerder gecommuniceerde doorlooptijd."
-        ),
-    )
-
-    opschorting_indicatie: bool = Field(
-        default=False,
-        description=(
-            "Aanduiding of de behandeling van de ZAAK tijdelijk is opgeschort."
-        ),
-    )
-    opschorting_reden: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description=(
-            "Omschrijving van de reden voor het opschorten van de behandeling van de zaak."
-        ),
-    )
-    opschorting_eerdere_opschorting: bool = Field(
-        default=False,
-        description=(
-            "Aanduiding of de behandeling van de ZAAK in het verleden is opgeschort."
-        ),
-    )
-
-    selectielijstklasse: Optional[str] = Field(
-        default=None,
-        max_length=1000,
-        description=(
-            "URL-referentie naar de categorie in de gehanteerde 'Selectielijst Archiefbescheiden' die, gezien "
-            "het zaaktype en het resultaattype van de zaak, bepalend is voor het archiefregime van de zaak."
-        ),
-    )
-
-    archiefnominatie: Optional[str] = Field(
-        default=None,
-        max_length=40,
-        description=(
-            "Aanduiding of het zaakdossier blijvend bewaard of na een bepaalde termijn vernietigd moet worden."
-        ),
-        index=True,
-    )
-    archiefstatus: str = Field(
-        default="nog_te_archiveren",
-        max_length=40,
-        description=(
-            "Aanduiding of het zaakdossier blijvend bewaard of na een bepaalde termijn vernietigd moet worden."
-        ),
-        index=True,
-    )
-    archiefactiedatum: Optional[date] = Field(
-        default=None,
-        description=(
-            "De datum waarop het gearchiveerde zaakdossier vernietigd moet worden dan wel overgebracht moet "
-            "worden naar een archiefbewaarplaats. Wordt automatisch berekend bij het aanmaken of wijzigen van "
-            "een RESULTAAT aan deze ZAAK indien nog leeg."
-        ),
-        index=True,
-    )
-
-    opdrachtgevende_organisatie: Optional[str] = Field(
-        default=True,
-        description=(
-            "De krachtens publiekrecht ingestelde rechtspersoon dan wel "
-            "ander niet-natuurlijk persoon waarbinnen het (bestuurs)orgaan zetelt "
-            "dat opdracht heeft gegeven om taken uit te voeren waaraan de zaak "
-            "invulling geeft."
-        ),
-    )
-
-    processobjectaard: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description=(
-            "Omschrijving van het object, subject of gebeurtenis waarop, vanuit"
-            " archiveringsoptiek, de zaak betrekking heeft."
-        ),
-    )
-    startdatum_bewaartermijn: Optional[date] = Field(
-        default=None,
-        description=(
-            "De datum die de start markeert van de termijn waarop het zaakdossier"
-            " vernietigd moet worden."
-        ),
-    )
-    processobject_datumkenmerk: Optional[str] = Field(
-        default=None,
-        max_length=250,
-        description=(
-            "De naam van de attribuutsoort van het procesobject dat bepalend is "
-            "voor het einde van de procestermijn."
-        ),
-    )
-    processobject_identificatie: Optional[str] = Field(
-        default=None,
-        max_length=250,
-        description=("De unieke aanduiding van het procesobject."),
-    )
-    processobject_objecttype: Optional[str] = Field(
-        default=None,
-        max_length=250,
-        description=("Het soort object dat het procesobject representeert."),
-    )
-    processobject_registratie: Optional[str] = Field(
-        default=None,
-        max_length=250,
-        description=(
-            "De naam van de registratie waarvan het procesobject deel uit maakt."
-        ),
-    )
-    communicatiekanaal_naam: Optional[str] = Field(
-        default=None,
-        max_length=250,
-        description=(
-            "De naam van het medium waarlangs de aanleiding om een zaak te starten is ontvangen."
-        ),
-    )
-
-    created_on: datetime = Field(default_factory=datetime.utcnow)
+    archiefactiedatum = Column(Date, index=True, nullable=True)
+    opdrachtgevende_organisatie = Column(String, nullable=True)
+    processobjectaard = Column(String(200), nullable=True)
+    startdatum_bewaartermijn = Column(Date, nullable=True)
+    processobject_datumkenmerk = Column(String(250), nullable=True)
+    processobject_identificatie = Column(String(250), nullable=True)
+    processobject_objecttype = Column(String(250), nullable=True)
+    processobject_registratie = Column(String(250), nullable=True)
+    communicatiekanaal_naam = Column(String(250), nullable=True)
+    created_on = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
-class Rol(SQLModel, table=True):
+class Rol(Base):
     __tablename__ = "zaken_rol"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
 
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(back_populates="rollen")
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="rollen")
 
 
-class ZaakEigenschap(SQLModel, table=True):
+class ZaakEigenschap(Base):
     __tablename__ = "zaken_zaakeigenschap"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(back_populates="eigenschappen")
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="eigenschappen")
 
 
-class ZaakInformatieObject(SQLModel, table=True):
+class ZaakInformatieObject(Base):
     __tablename__ = "zaken_zaakinformatieobject"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(back_populates="zaakinformatieobjecten")
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="zaakinformatieobjecten")
 
 
-class ZaakObject(SQLModel, table=True):
+class ZaakObject(Base):
     __tablename__ = "zaken_zaakobject"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(back_populates="zaakobjecten")
+
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="zaakobjecten")
 
 
-class ZaakKenmerk(SQLModel, table=True):
+class ZaakKenmerk(Base):
     __tablename__ = "zaken_zaakkenmerk"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(back_populates="kenmerken")
 
-    kenmerk: str = Field(
-        max_length=40,
-        description=("Identificeert uniek de zaak in een andere administratie."),
-    )
-    bron: str = Field(
-        max_length=40,
-        description=("De aanduiding van de administratie waar het kenmerk op slaat."),
-    )
+    id = Column(Integer, primary_key=True)
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="kenmerken")
+
+    kenmerk = Column(String(40), nullable=False)
+    bron = Column(String(40), nullable=False)
 
 
-class Resultaat(SQLModel, table=True):
+class Resultaat(Base):
     __tablename__ = "zaken_resultaat"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
 
-    zaak: Zaak | None = Relationship(back_populates="resultaat")
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="resultaat")
 
 
-class Status(SQLModel, table=True):
+class Status(Base):
     __tablename__ = "zaken_status"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    uuid: UUID = Field(
-        default_factory=uuid4,
-        index=True,
-        description="Unieke resource identifier (UUID4)",
-    )
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
 
-    zaak: Zaak | None = Relationship(back_populates="status")
+    id = Column(Integer, primary_key=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid4, index=True, nullable=False)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship("Zaak", back_populates="status")
 
 
-class RelevanteZaakRelatie(SQLModel, table=True):
+class RelevanteZaakRelatie(Base):
     __tablename__ = "zaken_relevantezaakrelatie"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    zaak_id: int | None = Field(
-        default=None,
-        foreign_key="zaken_zaak.identificatie_ptr_id",
-    )
-    zaak: Zaak | None = Relationship(
-        back_populates="relevante_andere_zaken",
-        sa_relationship_kwargs={"foreign_keys": "[RelevanteZaakRelatie.zaak_id]"},
+
+    id = Column(Integer, primary_key=True)
+
+    zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
+    zaak = relationship(
+        "Zaak", back_populates="relevante_andere_zaken", foreign_keys=[zaak_id]
     )
 
-    relevant_zaak_id: Optional[int] = Field(
-        default=None,
-        sa_column=Column(
-            "_relevant_zaak_id",
-            Integer,
-            ForeignKey("zaken_zaak.identificatie_ptr_id"),
-            nullable=True,
-        ),
-        description="URL-referentie naar de ZAAK.",
+    relevant_zaak_id = Column(
+        "_relevant_zaak_id",
+        Integer,
+        ForeignKey("zaken_zaak.identificatie_ptr_id"),
+        nullable=True,
     )
-    relevant_zaak: Optional["Zaak"] = Relationship(
-        sa_relationship_kwargs={
-            "foreign_keys": "[RelevanteZaakRelatie.relevant_zaak_id]"
-        }
-    )
+    relevant_zaak = relationship("Zaak", foreign_keys=[relevant_zaak_id])
 
-    aard_relatie: Optional[str] = Field(
-        default=None,
-        max_length=20,
-        description=(
-            "Benamingen van de aard van de relaties van andere zaken tot (onderhanden) zaken."
-        ),
-    )
-    overige_relatie: Optional[str] = Field(
-        default=None,
-        max_length=100,
-        description=(
-            "Naam van de overige relatie. Verplicht bij relatie aard `overig`."
-        ),
-    )
-    toelichting: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description=(
-            "Een toelichting op de aard van de relatie tussen beide ZAKEN. "
-            "(vooral bedoeld in combinatie met relatie aard `overig`)"
-        ),
-    )
+    aard_relatie = Column(String(20))
+    overige_relatie = Column(String(100))
+    toelichting = Column(String(255))

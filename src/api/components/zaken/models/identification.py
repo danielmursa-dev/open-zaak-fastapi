@@ -1,26 +1,10 @@
-from typing import Optional
+from sqlalchemy import Column, Integer, String
 
-from sqlmodel import Field, SQLModel
+from src.core.database import Base
 
 
-class ZaakIdentificatie(SQLModel, table=True):
+class ZaakIdentificatie(Base):
     __tablename__ = "zaken_zaakidentificatie"
-    id: Optional[int] = Field(default=None, primary_key=True)
-    identificatie: Optional[str] = Field(
-        default="",
-        max_length=40,
-        description=(
-            "De unieke identificatie van de ZAAK binnen de organisatie "
-            "die verantwoordelijk is voor de behandeling van de ZAAK."
-        ),
-    )
-    bronorganisatie: str = Field(
-        min_length=9,
-        max_length=9,
-        description=(
-            "Het RSIN van de Niet-natuurlijk persoon zijnde de "
-            "organisatie die de zaak heeft gecreeerd. Dit moet een geldig "
-            "RSIN zijn van 9 nummers en voldoen aan "
-            "https://nl.wikipedia.org/wiki/Burgerservicenummer#11-proef"
-        ),
-    )
+    id = Column(Integer, primary_key=True)
+    identificatie = Column(String(40))
+    bronorganisatie = Column(String(9))
