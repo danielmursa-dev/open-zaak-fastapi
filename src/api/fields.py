@@ -14,9 +14,11 @@ class HyperlinkedRelatedField:
         self,
         view_name: str,
         lookup_field: str = "uuid",
+        value_field: Any = None,
     ):
         self.view_name = view_name
         self.lookup_field = lookup_field
+        self.value_field = value_field
 
     def get_url(self, obj: Any) -> Optional[str]:
         """
@@ -28,8 +30,11 @@ class HyperlinkedRelatedField:
         if hasattr(obj, "pk") and obj.pk in (None, ""):
             return None
         request = request_contextvar.get()
-        lookup_value = getattr(obj, self.lookup_field)
-        return str(request.url_for(self.view_name, **{self.lookup_field: lookup_value}))
+        if self.value_field:
+            value = getattr(obj, self.value_field)
+        else:
+            value = getattr(obj, self.lookup_field)
+        return str(request.url_for(self.view_name, **{self.lookup_field: value}))
 
     def serialize_field(self, value: Any) -> Union[List, str]:
         if isinstance(value, list):

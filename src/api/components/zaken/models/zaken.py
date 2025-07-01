@@ -54,7 +54,9 @@ class Zaak(Base):
     eigenschappen = relationship("ZaakEigenschap", back_populates="zaak")
     zaakobjecten = relationship("ZaakObject", back_populates="zaak")
     kenmerken = relationship("ZaakKenmerk", back_populates="zaak")
-    status = relationship("Status", back_populates="zaak")
+    status = relationship(
+        "Status", back_populates="zaak", order_by="desc(Status.datum_status_gezet)"
+    )
 
     relevante_andere_zaken = relationship(
         "RelevanteZaakRelatie",
@@ -97,6 +99,18 @@ class Zaak(Base):
     processobject_registratie = Column(String(250), nullable=True)
     communicatiekanaal_naam = Column(String(250), nullable=True)
     created_on = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    @property
+    def current_status_uuid(self):
+        if self.status:
+            return self.status[0].uuid
+        return None
+
+    @property
+    def current_resultaat_uuid(self):
+        if self.resultaat:
+            return self.resultaat[0].uuid
+        return None
 
 
 class Rol(Base):
@@ -172,6 +186,8 @@ class Status(Base):
 
     zaak_id = Column(Integer, ForeignKey("zaken_zaak.identificatie_ptr_id"))
     zaak = relationship("Zaak", back_populates="status")
+
+    datum_status_gezet = Column(DateTime, nullable=True, index=True)
 
 
 class RelevanteZaakRelatie(Base):

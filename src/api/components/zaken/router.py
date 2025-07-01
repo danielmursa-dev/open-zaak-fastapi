@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter
 from fastapi_pagination.ext.sqlmodel import paginate
+from sqlalchemy import desc
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import select
 
@@ -10,7 +11,6 @@ from src.api.components.zaken.models.zaken import (
     Rol,
     Status,
     Zaak,
-    ZaakEigenschap,
     ZaakInformatieObject,
     ZaakObject,
 )
@@ -24,7 +24,8 @@ zaken_router = APIRouter()
 @zaken_router.get("/zaken", name="zaken-list", response_model=Page[ZaakSchema])
 async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
     statement = (
-        select(Zaak).options(
+        select(Zaak)
+        .options(
             joinedload(Zaak.zaak_identificatie),
             joinedload(Zaak.zaaktype),
             selectinload(Zaak.kenmerken),
@@ -40,14 +41,10 @@ async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
             selectinload(Zaak.hoofdzaak).load_only(Zaak.uuid),
             selectinload(Zaak.deelzaken).load_only(Zaak.uuid),
         )
+        .order_by(desc(Zaak.identificatie_ptr_id))
         # .where(Zaak.uuid == "fdc97bac-4ec0-44df-bb7e-efaff23da325")
     )
     return await paginate(session, statement)
-
-
-@zaken_router.get("/zaaktypen/{uuid}", name="zaaktype-detail")
-async def detail_zaaktype(uuid: str, session: SessionDep) -> Any:
-    return []
 
 
 @zaken_router.get("/zaken/{uuid}", name="zaak-detail")
@@ -61,7 +58,7 @@ async def detail_rol(uuid: str, session: SessionDep) -> Any:
 
 
 @zaken_router.get(
-    "/zaken/{zaak_uuid}/eigenschappen/{uuid}", name="eigenschappen-detail"
+    "/zaken/{zaak_uuid}/zaakeigenschappen/{uuid}", name="eigenschappen-detail"
 )
 async def detail_eigenschappen(zaak_uuid: str, uuid: str, session: SessionDep) -> Any:
     return []

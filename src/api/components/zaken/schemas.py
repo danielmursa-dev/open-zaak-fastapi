@@ -123,14 +123,6 @@ class ZaakSchema(BaseMixin):
             view_name="zaakobjecttypen-detail", lookup_field="uuid"
         ),
     ]
-    resultaat: Annotated[
-        List[Resultaat],
-        HyperlinkedRelatedField(view_name="resultaattypen-detail", lookup_field="uuid"),
-    ]
-    status: Annotated[
-        List[Status],
-        HyperlinkedRelatedField(view_name="statustypen-detail", lookup_field="uuid"),
-    ]
 
     class Config:
         exclude_fields = {
@@ -143,6 +135,8 @@ class ZaakSchema(BaseMixin):
             "opschorting_eerdere_opschorting": bool,
             "verlenging_reden": Optional[str],
             "verlenging_duur": Optional[timedelta],
+            "current_status_uuid": Optional[UUID],
+            "current_resultaat_uuid": Optional[UUID],
         }
 
     @computed_field
@@ -150,6 +144,30 @@ class ZaakSchema(BaseMixin):
     def url(self) -> Union[List, str]:
         field = HyperlinkedRelatedField(view_name="zaak-detail", lookup_field="uuid")
         return field.serialize_field(self)
+
+    @computed_field
+    @property
+    def status(self) -> Optional[Union[List, str]]:
+        if self.current_status_uuid:
+            field = HyperlinkedRelatedField(
+                view_name="statustypen-detail",
+                value_field="current_status_uuid",
+                lookup_field="uuid",
+            )
+            return field.serialize_field(self)
+        return None
+
+    @computed_field
+    @property
+    def resultaat(self) -> Optional[Union[List, str]]:
+        if self.current_resultaat_uuid:
+            field = HyperlinkedRelatedField(
+                view_name="resultaattypen-detail",
+                value_field="current_resultaat_uuid",
+                lookup_field="uuid",
+            )
+            return field.serialize_field(self)
+        return None
 
     @computed_field
     @property
@@ -184,11 +202,13 @@ class ZaakSchema(BaseMixin):
 
     @computed_field
     @property
-    def verlenging(self) -> dict:
-        return {
-            "reden": self.verlenging_reden,
-            "duur": self.verlenging_duur,
-        }
+    def verlenging(self) -> Optional[dict]:
+        if self.verlenging_reden:
+            return {
+                "reden": self.verlenging_reden,
+                "duur": self.verlenging_duur,
+            }
+        return None
 
     @computed_field
     @property
