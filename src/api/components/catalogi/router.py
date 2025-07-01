@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter
+
 from src.core.deps import SessionDep
 
 catalogi_router = APIRouter()

@@ -1,16 +1,13 @@
-import requests
 import unittest
+
+import requests
 from deepdiff import DeepDiff
 
-OLD_LIST = "/zaken/api/v1/zaken?pageSize=100"
-NEW_LIST = "/zaken/api/v1/zaken?pageSize=100"
-
-
-OLD_LIST = "http://localhost:8000/zaken/api/v1/zaken?pageSize=10"
-NEW_LIST = "http://localhost:8001/zaken/api/v1/zaken?pageSize=10"
+OLD_LIST = "http://localhost:8000/zaken/api/v1/zaken?pageSize=100"  # OpenZaak
+NEW_LIST = "http://localhost:8001/zaken/api/v1/zaken?pageSize=100"  # FastApi
 
 AUTH_HEADERS = {
-    "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNzUxMzc0Njc0LCJjbGllbnRfaWQiOiJ0ZXN0IiwidXNlcl9pZCI6InRlc3QiLCJ1c2VyX3JlcHJlc2VudGF0aW9uIjoidGVzdCJ9.-Qm91a4esBnk3S4KcyEd9-mMT_mYgT6Vu_0w_OBVZ1c",
+    "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ0ZXN0IiwiaWF0IjoxNzUxMzc5MDMwLCJjbGllbnRfaWQiOiJ0ZXN0IiwidXNlcl9pZCI6InRlc3QiLCJ1c2VyX3JlcHJlc2VudGF0aW9uIjoidGVzdCJ9.mFEKhaCGnXOw_nLJE9nOwR-18q0i3MNhRJHEcQbNJ8g",
     "Accept-Crs": "EPSG:4326",
 }
 
@@ -27,41 +24,35 @@ def replace_url(data):
 
 
 class TestAPIResponses(unittest.TestCase):
+    def fetch_all_results(self, url, headers=None):
+        results = []
+        i = 0
+        while url and i < 20:
+            print(f"Requests: {url}")
+            response = requests.get(url, headers=headers)
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            for e in data["results"]:
+                e.pop("_expand", None)
+                for key, value in e.items():
+                    e[key] = replace_url(value)
+            results.extend(data["results"])
+            url = data.get("next")
+            i += 1
+        return results
+
     def test_compare_api_responses(self):
-        response1 = requests.get(OLD_LIST, headers=AUTH_HEADERS)
-        response2 = requests.get(NEW_LIST)
+        results_old = self.fetch_all_results(OLD_LIST, headers=AUTH_HEADERS)
+        results_new = self.fetch_all_results(NEW_LIST)
 
-        self.assertEqual(response1.status_code, 200)
-        self.assertEqual(response2.status_code, 200)
+        self.assertEqual(len(results_old), len(results_new))
 
-        data1 = response1.json()
-        data2 = response2.json()
-
-        self.assertEqual(set(data1.keys()), set(data2.keys()))
-
-        for e in data1["results"]:
-            e.pop("_expand")
-            for key, value in e.items():
-                e[key] = replace_url(value)
-
-        for e in data2["results"]:
-            for key, value in e.items():
-                e[key] = replace_url(value)
-
-        self.assertEqual(len(data1["results"]), len(data2["results"]))
-        self.assertEqual(data1["count"], data2["count"])
-
-        # self.assertEqual(data1["next"], data2["next"])
-        # self.assertEqual(data1["previous"], data2["previous"])
-
-        diff = DeepDiff(
-            data1["results"], data2["results"], view="tree", verbose_level=2
-        )
+        diff = DeepDiff(results_old, results_new, view="tree", verbose_level=2)
         if diff:
             for diff_type, changes in diff.items():
                 print(f"{diff_type}:")
                 for change in changes:
-                    print(f"T1 {change.t1}, T2 {change.t2}")
+                    print(change)
             self.fail("API responses differ")
 
 

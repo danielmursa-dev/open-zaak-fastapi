@@ -39,7 +39,7 @@ class BaseUseLinks(BaseLinksCustomizer[TPage_contra], ABC):
 
 class CustomDefaultLinksCustomizer(DefaultLinksCustomizer):
     def resolve_links(self, _page: BasePage, key: str) -> Links:
-        links = resolve_default_links(_page, only_path=self.only_path)
+        links = resolve_default_links(_page, only_path=False)
         return getattr(links, key, "")
 
 
