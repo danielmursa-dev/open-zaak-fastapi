@@ -19,7 +19,6 @@ class BaseMixin(BaseModel):
                 setattr(cls, field_name, Field(exclude=True))
 
     class Config:
-        orm_mode = True
         alias_generator = alias_keys
         validate_by_name = True
         from_attributes = True
