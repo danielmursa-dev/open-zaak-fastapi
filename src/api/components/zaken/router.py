@@ -11,6 +11,7 @@ from src.api.components.zaken.models.zaken import (
     Rol,
     Status,
     Zaak,
+    ZaakEigenschap,
     ZaakInformatieObject,
     ZaakObject,
 )
@@ -30,7 +31,7 @@ async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
             joinedload(Zaak.zaaktype),
             selectinload(Zaak.kenmerken),
             selectinload(Zaak.rollen).load_only(Rol.uuid),
-            selectinload(Zaak.eigenschappen),
+            selectinload(Zaak.eigenschappen).selectinload(ZaakEigenschap.zaak),
             selectinload(Zaak.status).load_only(Status.uuid),
             selectinload(Zaak.relevante_andere_zaken),
             selectinload(Zaak.zaakinformatieobjecten).load_only(

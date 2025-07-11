@@ -2,7 +2,6 @@ from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Depends
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.database import engine
@@ -13,4 +12,4 @@ async def get_db() -> Generator[AsyncSession, None, None]:
         yield session
 
 
-SessionDep = Annotated[Session, Depends(get_db)]
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
