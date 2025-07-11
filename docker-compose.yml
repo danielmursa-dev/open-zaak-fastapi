@@ -1,0 +1,53 @@
+version: '3.4'
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: openzaak
+      POSTGRES_PASSWORD: openzaak
+      POSTGRES_DB: openzaak
+    command: postgres -c max_connections=300 -c log_min_messages=LOG
+    volumes:
+      - ./docker/postgres.entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+      - db:/var/lib/postgresql/data
+    ports:
+      - "11234:5432"
+    networks:
+      - open-zaak-dev
+
+  redis:
+    image: redis
+    networks:
+      - open-zaak-dev
+
+  web.local:
+    build: .
+    image: openzaak/open-zaak-fastapi:latest
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: openzaak
+      DB_USER: openzaak
+      DB_PASSWORD: openzaak
+      IS_HTTPS: "no"
+      ALLOWED_HOSTS: localhost,127.0.0.1,web,web.local
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    labels:
+      - app=open-zaak-fastapi
+      - service=api
+    networks:
+      - open-zaak-dev
+
+volumes:
+  db:
+  media:
+  private-media:
+
+networks:
+  open-zaak-dev:
+    name: open-zaak-dev
