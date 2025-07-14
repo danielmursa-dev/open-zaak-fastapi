@@ -10,9 +10,7 @@ from src.api.components.catalogi.models.zaaktype import ZaakType
 from src.api.components.zaken.models.constants import BetalingsIndicatie
 from src.api.components.zaken.models.identification import ZaakIdentificatie
 from src.api.components.zaken.models.zaken import (
-    Resultaat,
     Rol,
-    Status,
     Zaak,
     ZaakEigenschap,
     ZaakInformatieObject,
