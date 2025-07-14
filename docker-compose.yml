@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   db:
-    image: postgis/postgis:17-3.5
+    image: postgis/postgis:15-3.5
     environment:
       POSTGRES_USER: openzaak
       POSTGRES_PASSWORD: openzaak
