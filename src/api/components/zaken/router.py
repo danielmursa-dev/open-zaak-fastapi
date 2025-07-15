@@ -1,10 +1,12 @@
 from typing import Any
 
-from fastapi import APIRouter
-from fastapi_pagination.ext.sqlmodel import paginate
-from sqlalchemy import desc
+from fastapi import APIRouter, Depends
+from fastapi_pagination import Page
+from fastapi_pagination.cursor import CursorPage, CursorParams
+from fastapi_pagination.ext.sqlalchemy import paginate
+from sqlalchemy import desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from sqlmodel import select
 
 from src.api.components.zaken.models.zaken import (
     Resultaat,
@@ -16,70 +18,104 @@ from src.api.components.zaken.models.zaken import (
     ZaakObject,
 )
 from src.api.components.zaken.schemas import ZaakSchema
-from src.core.deps import SessionDep
-from src.core.pagination import Page
+from src.core.database import get_session
+from src.core.pagination import Page as CustomPage
+
+# from src.core.middleware import profile_html
 
 zaken_router = APIRouter()
 
+# import logging
 
-@zaken_router.get("/zaken", name="zaken-list", response_model=Page[ZaakSchema])
-async def list_zaken(session: SessionDep) -> Page[ZaakSchema]:
-    statement = (
-        select(Zaak)
-        .options(
-            joinedload(Zaak.zaak_identificatie),
-            joinedload(Zaak.zaaktype),
-            selectinload(Zaak.kenmerken),
-            selectinload(Zaak.rollen).load_only(Rol.uuid),
-            selectinload(Zaak.eigenschappen).selectinload(ZaakEigenschap.zaak),
-            selectinload(Zaak.status).load_only(Status.uuid),
-            selectinload(Zaak.relevante_andere_zaken),
-            selectinload(Zaak.zaakinformatieobjecten).load_only(
-                ZaakInformatieObject.uuid
-            ),
-            selectinload(Zaak.zaakobjecten).load_only(ZaakObject.uuid),
-            selectinload(Zaak.resultaat).load_only(Resultaat.uuid),
-            selectinload(Zaak.hoofdzaak).load_only(Zaak.uuid),
-            selectinload(Zaak.deelzaken).load_only(Zaak.uuid),
-        )
-        .order_by(desc(Zaak.identificatie_ptr_id))
-        # .where(Zaak.uuid == "fdc97bac-4ec0-44df-bb7e-efaff23da325")
+# logging.basicConfig()
+# logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
+QUERY = (
+    select(Zaak)
+    .options(
+        joinedload(Zaak.zaak_identificatie),
+        selectinload(Zaak.zaaktype),
+        selectinload(Zaak.kenmerken),
+        selectinload(Zaak.rollen).load_only(Rol.uuid),
+        selectinload(Zaak.eigenschappen).selectinload(ZaakEigenschap.zaak),
+        selectinload(Zaak.status).load_only(Status.uuid),
+        selectinload(Zaak.relevante_andere_zaken),
+        selectinload(Zaak.zaakinformatieobjecten).load_only(ZaakInformatieObject.uuid),
+        selectinload(Zaak.zaakobjecten).load_only(ZaakObject.uuid),
+        selectinload(Zaak.resultaat).load_only(Resultaat.uuid),
+        selectinload(Zaak.hoofdzaak).load_only(Zaak.uuid),
+        selectinload(Zaak.deelzaken).load_only(Zaak.uuid),
     )
-    return await paginate(session, statement)
+    .order_by(desc(Zaak.identificatie_ptr_id))
+)
+
+
+@zaken_router.get("/zaken", name="zaken-list", response_model=CustomPage[ZaakSchema])
+async def list_zaken(
+    session: AsyncSession = Depends(get_session),
+) -> Page[ZaakSchema]:
+    return await paginate(session, QUERY)
+
+
+@zaken_router.get(
+    "/zaken-cursor", name="zaken-list", response_model=CursorPage[ZaakSchema]
+)
+async def list_zaken_cursor(
+    params: CursorParams = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> CursorPage[ZaakSchema]:
+    return await paginate(session, QUERY, params)
+
+
+@zaken_router.get("/zaken-page", name="zaken-list", response_model=Page[ZaakSchema])
+async def list_zaken_base_page(
+    session: AsyncSession = Depends(get_session),
+) -> Page[ZaakSchema]:
+    return await paginate(session, QUERY)
 
 
 @zaken_router.get("/zaken/{uuid}", name="zaak-detail")
-async def detail_zaken(uuid: str, session: SessionDep) -> Any:
+async def detail_zaken(uuid: str, session: AsyncSession = Depends(get_session)) -> Any:
     return []
 
 
 @zaken_router.get("/rollen/{uuid}", name="rol-detail")
-async def detail_rol(uuid: str, session: SessionDep) -> Any:
+async def detail_rol(uuid: str, session: AsyncSession = Depends(get_session)) -> Any:
     return []
 
 
 @zaken_router.get(
     "/zaken/{zaak_uuid}/zaakeigenschappen/{uuid}", name="eigenschappen-detail"
 )
-async def detail_eigenschappen(zaak_uuid: str, uuid: str, session: SessionDep) -> Any:
+async def detail_eigenschappen(
+    zaak_uuid: str, uuid: str, session: AsyncSession = Depends(get_session)
+) -> Any:
     return []
 
 
 @zaken_router.get("/resultaten/{uuid}", name="resultaattypen-detail")
-async def detail_resultaattypen(uuid: str, session: SessionDep) -> Any:
+async def detail_resultaattypen(
+    uuid: str, session: AsyncSession = Depends(get_session)
+) -> Any:
     return []
 
 
 @zaken_router.get("/informatieobjecttypen/{uuid}", name="zaakinformatieobject-detail")
-async def detail_informatieobjecttypen(uuid: str, session: SessionDep) -> Any:
+async def detail_informatieobjecttypen(
+    uuid: str, session: AsyncSession = Depends(get_session)
+) -> Any:
     return []
 
 
 @zaken_router.get("/zaakobjecten/{uuid}", name="zaakobjecttypen-detail")
-async def detail_zaakobjecttypen(uuid: str, session: SessionDep) -> Any:
+async def detail_zaakobjecttypen(
+    uuid: str, session: AsyncSession = Depends(get_session)
+) -> Any:
     return []
 
 
 @zaken_router.get("/statussen/{uuid}", name="statustypen-detail")
-async def detail_statustypen(uuid: str, session: SessionDep) -> Any:
+async def detail_statustypen(
+    uuid: str, session: AsyncSession = Depends(get_session)
+) -> Any:
     return []
