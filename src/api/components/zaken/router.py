@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from fastapi import APIRouter, Depends
 from fastapi_pagination import Page
@@ -21,7 +21,6 @@ from src.api.components.zaken.schemas import ZaakSchema
 from src.core.database import get_session
 from src.core.pagination import Page as CustomPage
 
-# from src.core.middleware import profile_html
 
 zaken_router = APIRouter()
 
@@ -57,8 +56,17 @@ async def list_zaken(
     return await paginate(session, QUERY)
 
 
+@zaken_router.get("/zaken-no-page", name="zaken-list", response_model=List[ZaakSchema])
+async def list_zaken_no_page(
+    session: AsyncSession = Depends(get_session),
+) -> list[ZaakSchema]:
+    result = await session.execute(QUERY.limit(100).offset(100))
+    zaken = result.scalars().all()
+    return zaken
+
+
 @zaken_router.get(
-    "/zaken-cursor", name="zaken-list", response_model=CursorPage[ZaakSchema]
+    "/zaken-cursor-page", name="zaken-list", response_model=CursorPage[ZaakSchema]
 )
 async def list_zaken_cursor(
     params: CursorParams = Depends(),
@@ -67,7 +75,9 @@ async def list_zaken_cursor(
     return await paginate(session, QUERY, params)
 
 
-@zaken_router.get("/zaken-page", name="zaken-list", response_model=Page[ZaakSchema])
+@zaken_router.get(
+    "/zaken-base-page", name="zaken-list", response_model=Page[ZaakSchema]
+)
 async def list_zaken_base_page(
     session: AsyncSession = Depends(get_session),
 ) -> Page[ZaakSchema]:
